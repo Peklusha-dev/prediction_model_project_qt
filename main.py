@@ -1,8 +1,13 @@
+from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox
 import traceback  # Для детального вывода ошибок
 
 from ui_module.main_wind import UiMainWindow
 from ui_module.employee_widget import UiEmployeeWidget
+from ui_module.group_widget import UiGroupWidget
+from ui_module.department_widget import UiDepartmentWidget
+from ui_module.unit_widget import UiUnitWidget
+from ui_module.institute_widget import UiInstituteWidget
 from ui_module.graf_wind import GraphWindow
 from read_xlsx_module.file_handler import (get_employee_by_fio_department,
                                            get_unique_departments,
@@ -34,7 +39,7 @@ class MainWindow(QMainWindow, UiMainWindow):
                 self.add_employee_widget()
             elif self.butt_group.isChecked():
                 self.statusBar().showMessage("Вы выбрали: Группа", 5000)
-                self.add_employee_widget()
+                self.add_group_widget()
             elif self.butt_department.isChecked():
                 self.statusBar().showMessage("Вы выбрали: Отдел", 5000)
                 self.add_department_widget()
@@ -64,6 +69,8 @@ class MainWindow(QMainWindow, UiMainWindow):
             self.employee_widget.comboBox_department.addItems(departments)
 
             self.employee_widget.comboBox_department.currentTextChanged.connect(self.update_fio_list)
+            # Обновление информации о должности сотрудника выбранного в комбобоксе
+            self.employee_widget.comboBox_fio.currentTextChanged.connect(self.update_employee_position)
             self.update_fio_list(self.employee_widget.comboBox_department.currentText())
 
             self.employee_widget.comboBox_fio.setEditable(True)
@@ -75,16 +82,44 @@ class MainWindow(QMainWindow, UiMainWindow):
     def add_group_widget(self):
         """Добавляем виджет с выбором сотрудников для добавления в группу."""
         try:
-            print("Добавление виджета <Группа>...")
-            pass
+            self.current_widget = QWidget()
+            self.group_widget = UiGroupWidget()
+            self.group_widget.setupUi(self.current_widget)
+
+            layout = self.main_widget.layout()
+            spacer_index = layout.count() - 1
+            layout.insertWidget(spacer_index, self.current_widget)
+
+            departments = get_unique_departments(self.file_path)
+            self.group_widget.comboBox_department.addItems(departments)
+
+            self.group_widget.comboBox_department.currentTextChanged.connect(self.update_group_fio_list)
+            self.group_widget.comboBox_fio.currentTextChanged.connect(self.update_group_employee_position)
+            self.update_group_fio_list(self.group_widget.comboBox_department.currentText())
+
+            self.group_widget.comboBox_fio.setEditable(True)
+
+            self.group_widget.butt_add.clicked.connect(self.add_to_group)
+            self.group_widget.butt_analize.clicked.connect(self.display_group_data)
+
         except Exception as e:
             self.show_error_message("Ошибка при добавлении виджета <Группа>", e)
 
     def add_department_widget(self):
         """Добавляем виджет с выбором отдела."""
         try:
-            print("Добавление виджета <Отдел>...")
-            pass
+            self.current_widget = QWidget()
+            self.department_widget = UiDepartmentWidget()
+            self.department_widget.setupUi(self.current_widget)
+
+            layout = self.main_widget.layout()
+            spacer_index = layout.count() - 1
+            layout.insertWidget(spacer_index, self.current_widget)
+
+            departments = get_unique_departments(self.file_path)
+            self.department_widget.comboBox_department.addItems(departments)
+
+            self.department_widget.butt_analize.clicked.connect(self.display_department_data)
         except Exception as e:
             self.show_error_message("Ошибка при добавлении виджета <Отдел>", e)
 
@@ -92,7 +127,18 @@ class MainWindow(QMainWindow, UiMainWindow):
         """Добавляем виджет с выбором управления."""
         try:
             print("Добавление виджета <Управление>...")
-            pass
+            self.current_widget = QWidget()
+            self.unit_widget = UiUnitWidget()
+            self.unit_widget.setupUi(self.current_widget)
+
+            layout = self.main_widget.layout()
+            spacer_index = layout.count() - 1
+            layout.insertWidget(spacer_index, self.current_widget)
+
+            units = ["Управление 1", "Управление 2", "Управление 3"]  # Пока моковые
+            self.unit_widget.comboBox_department.addItems(units)
+
+            self.unit_widget.butt_analize.clicked.connect(self.display_unit_data)
         except Exception as e:
             self.show_error_message("Ошибка при добавлении виджета <Управление>", e)
 
@@ -100,7 +146,15 @@ class MainWindow(QMainWindow, UiMainWindow):
         """Добавляем текст о том, что выбран анализ по институту."""
         try:
             print("Добавление виджета <Институт>...")
-            pass
+            self.current_widget = QWidget()
+            self.institute_widget = UiInstituteWidget()
+            self.institute_widget.setupUi(self.current_widget)
+
+            layout = self.main_widget.layout()
+            spacer_index = layout.count() - 1
+            layout.insertWidget(spacer_index, self.current_widget)
+
+            self.institute_widget.butt_analize.clicked.connect(self.display_institute_data)
         except Exception as e:
             self.show_error_message("Ошибка при добавлении виджета <Институт>", e)
 
@@ -113,9 +167,89 @@ class MainWindow(QMainWindow, UiMainWindow):
             if employees:
                 self.employee_widget.comboBox_fio.addItems(employees)
             self.employee_widget.comboBox_fio.blockSignals(False)
+            # После обновления списка сотрудников сразу обновляем должность
+            self.update_employee_position()
         except Exception as e:
             self.show_error_message("Ошибка при обновлении списка сотрудников", e)
 
+    def update_group_fio_list(self, department):
+        """Обновляем список сотрудников для выбора группы."""
+        try:
+            self.group_widget.comboBox_fio.blockSignals(True)
+            employees = get_employees_by_department(self.file_path, department)
+            self.group_widget.comboBox_fio.clear()
+            if employees:
+                self.group_widget.comboBox_fio.addItems(employees)
+            self.group_widget.comboBox_fio.blockSignals(False)
+            # После обновления списка сразу обновляем должность
+            self.update_group_employee_position()
+        except Exception as e:
+            self.show_error_message("Ошибка при обновлении списка сотрудников", e)
+
+    def update_employee_position(self):
+        """Обновление должности для выбираемого сотрудника."""
+        try:
+            selected_fio = self.employee_widget.comboBox_fio.currentText()
+            selected_department = self.employee_widget.comboBox_department.currentText()
+            if not selected_fio or not selected_department:
+                self.employee_widget.label_position.setText("Должность: неизвестна")
+                return
+
+            candidate_data = get_employee_by_fio_department(self.file_path, selected_department, selected_fio)
+            if candidate_data and "Должность" in candidate_data:
+                position = candidate_data["Должность"]
+                self.employee_widget.label_position.setText(f"Должность: {position}")
+            else:
+                self.employee_widget.label_position.setText("Должность: неизвестна")
+        except Exception as e:
+            self.show_error_message("Ошибка при обновлении должности сотрудника", e)
+
+    def update_group_employee_position(self):
+        """Обновление должности для выбираемого в группу сотрудника."""
+        try:
+            selected_fio = self.group_widget.comboBox_fio.currentText()
+            selected_department = self.group_widget.comboBox_department.currentText()
+
+            if not selected_fio or not selected_department:
+                self.group_widget.label_position.setText("Должность: неизвестна")
+                return
+
+            candidate_data = get_employee_by_fio_department(self.file_path, selected_department, selected_fio)
+            if candidate_data and "Должность" in candidate_data:
+                position = candidate_data["Должность"]
+                self.group_widget.label_position.setText(f"Должность: {position}")
+            else:
+                self.group_widget.label_position.setText("Должность: неизвестна")
+        except Exception as e:
+            self.show_error_message("Ошибка при обновлении должности сотрудника в группе", e)
+
+    def add_to_group(self):
+        """Добавляем выбранного сотрудника в таблицу группы."""
+        try:
+            selected_fio = self.group_widget.comboBox_fio.currentText()
+            selected_department = self.group_widget.comboBox_department.currentText()
+            if not selected_fio or not selected_department:
+                self.statusBar().showMessage("Не выбраны ФИО или отдел", 5000)
+                return
+
+            # Проверяем дублирование
+            for row in range(self.group_widget.tableWidget.rowCount()):
+                if self.group_widget.tableWidget.item(row, 0).text() == selected_fio:
+                    self.statusBar().showMessage("Сотрудник уже добавлен в группу", 5000)
+                    return
+
+            # Получаем данные сотрудника
+            candidate_data = get_employee_by_fio_department(self.file_path, selected_department, selected_fio)
+            position = candidate_data["Должность"] if candidate_data else "Должность неизвестна"
+
+            # Добавляем сотрудника в таблицу
+            row_count = self.group_widget.tableWidget.rowCount()
+            self.group_widget.tableWidget.insertRow(row_count)
+            self.group_widget.tableWidget.setItem(row_count, 0, QtWidgets.QTableWidgetItem(selected_fio))
+            self.group_widget.tableWidget.setItem(row_count, 1, QtWidgets.QTableWidgetItem(selected_department))
+            self.group_widget.tableWidget.setItem(row_count, 2, QtWidgets.QTableWidgetItem(position))
+        except Exception as e:
+            self.show_error_message("Ошибка при добавлении сотрудника в группу", e)
 
     def display_candidate_data(self):
         try:
@@ -159,6 +293,73 @@ class MainWindow(QMainWindow, UiMainWindow):
 
         except Exception as e:
             self.show_error_message("Ошибка при отображении данных кандидата", e)
+
+    def display_group_data(self):
+        """Показываем данные выбранной группы."""
+        try:
+            row_count = self.group_widget.tableWidget.rowCount()
+            if row_count == 0:
+                self.statusBar().showMessage("Группа пуста", 5000)
+                return
+
+            group_data = []
+            for row in range(row_count):
+                fio = self.group_widget.tableWidget.item(row, 0).text()
+                department = self.group_widget.tableWidget.item(row, 1).text()
+                position = self.group_widget.tableWidget.item(row, 2).text()  # Должность
+
+                group_data.append({"ФИО": fio, "Отдел": department, "Должность": position})
+
+            print("Заглушка: данные группы", group_data)
+
+            # Открываем окно с графиком
+            self.graph_window = GraphWindow(data=None)  # Передаём пустые данные
+            self.graph_window.show()
+        except Exception as e:
+            self.show_error_message("Ошибка при анализе данных группы", e)
+
+    def display_department_data(self):
+        """Показываем данные выбранного отдела."""
+        try:
+            selected_department = self.department_widget.comboBox_department.currentText()
+            if not selected_department:
+                self.statusBar().showMessage("Выберите отдел для анализа", 5000)
+                return
+
+            print(f"Заглушка: анализ данных для отдела '{selected_department}'")
+
+            # Открываем окно с графиком
+            self.graph_window = GraphWindow(data=None)  # Передаём пустые данные
+            self.graph_window.show()
+        except Exception as e:
+            self.show_error_message("Ошибка при анализе данных отдела", e)
+
+    def display_unit_data(self):
+        """Показываем данные выбранного управления."""
+        try:
+            selected_unit = self.unit_widget.comboBox_department.currentText()
+            if not selected_unit:
+                self.statusBar().showMessage("Выберите управление для анализа", 5000)
+                return
+
+            print(f"Заглушка: анализ данных для управления '{selected_unit}'")
+
+            # Открываем окно с графиком
+            self.graph_window = GraphWindow(data=None)  # Передаём пустые данные
+            self.graph_window.show()
+        except Exception as e:
+            self.show_error_message("Ошибка при анализе данных управления", e)
+
+    def display_institute_data(self):
+        """Показываем данные по институту."""
+        try:
+            print("Заглушка: анализ данных по институту")
+
+            # Открываем окно с графиком
+            self.graph_window = GraphWindow(data=None)  # Передаём пустые данные
+            self.graph_window.show()
+        except Exception as e:
+            self.show_error_message("Ошибка при анализе данных института", e)
 
     def show_error_message(self, context, exception):
         """Отображаем сообщение об ошибке."""

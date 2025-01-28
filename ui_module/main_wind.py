@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 class UiMainWindow(object):
     def setupUi(self, mainWindow):
-        mainWindow.setObjectName("mainWindow")
+        mainWindow.setObjectName("Модель оценки научных сотрудников")
         mainWindow.resize(1000, 600)
         self.centralwidget = QtWidgets.QWidget(mainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -79,7 +79,7 @@ class UiMainWindow(object):
 
     def retranslateUi(self, mainWindow):
         _translate = QtCore.QCoreApplication.translate
-        mainWindow.setWindowTitle(_translate("mainWindow", "MainWindow"))
+        mainWindow.setWindowTitle(_translate("mainWindow", "Модель оценки научных сотрудников"))
         self.label_main.setText(_translate("mainWindow", "Выбор объекта исследования"))
         self.butt_customer.setText(_translate("mainWindow", "Сотрудник"))
         self.butt_group.setText(_translate("mainWindow", "Группа сотрудников"))
