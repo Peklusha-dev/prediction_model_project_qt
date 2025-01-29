@@ -126,7 +126,6 @@ class MainWindow(QMainWindow, UiMainWindow):
     def add_unit_widget(self):
         """Добавляем виджет с выбором управления."""
         try:
-            print("Добавление виджета <Управление>...")
             self.current_widget = QWidget()
             self.unit_widget = UiUnitWidget()
             self.unit_widget.setupUi(self.current_widget)
@@ -145,7 +144,6 @@ class MainWindow(QMainWindow, UiMainWindow):
     def add_institute_widget(self):
         """Добавляем текст о том, что выбран анализ по институту."""
         try:
-            print("Добавление виджета <Институт>...")
             self.current_widget = QWidget()
             self.institute_widget = UiInstituteWidget()
             self.institute_widget.setupUi(self.current_widget)
@@ -253,41 +251,34 @@ class MainWindow(QMainWindow, UiMainWindow):
 
     def display_candidate_data(self):
         try:
+            user_data = []
             selected_fio = self.employee_widget.comboBox_fio.currentText()
             selected_department = self.employee_widget.comboBox_department.currentText()
 
-            # Получаем данные кандидата
+            # Получаем данные сотрудника
             candidate_data = get_employee_by_fio_department(self.file_path, selected_department, selected_fio)
-            print(candidate_data)
 
             if not candidate_data:
                 self.statusBar().showMessage("Нет данных для выбранного сотрудника", 5000)
                 return
 
-            # Извлекаем нужную информацию для графика
-            graph_data = []
-            for result in candidate_data["Результаты"]:
-                year = result["Год тестирования"]
-                criteria = result["Критерии"]
-                total_score = result["Сумма баллов"]
-
-                # Преобразуем данные в формат для графика
-                graph_data.append({
-                    "Год тестирования": year,
-                    "Результаты": total_score
-                })
-
-            if not graph_data:
-                self.statusBar().showMessage("Нет корректных данных для графика", 5000)
-                return
+            # Моки для проверки отрисовки
+            graph_data = {
+                2020: 75,
+                2021: 80,
+                2022: 85,
+                2023: 90,
+                2024: 88,
+                2025: 100  # Предсказанный результат
+            }
 
             # Открываем окно с графиком
             position = candidate_data.get("Должность", "Должность неизвестна")
+            user_data.append({"ФИО": selected_fio, "Отдел": selected_department, "Должность": position})
             self.graph_window = GraphWindow(
                 data=graph_data,
-                fio=selected_fio,
-                department=selected_department,
-                position=position,
+                context='employee',
+                context_data=user_data,
             )
             self.graph_window.show()
 
@@ -302,6 +293,7 @@ class MainWindow(QMainWindow, UiMainWindow):
                 self.statusBar().showMessage("Группа пуста", 5000)
                 return
 
+            # Получаем данные группы сотрудников
             group_data = []
             for row in range(row_count):
                 fio = self.group_widget.tableWidget.item(row, 0).text()
@@ -310,10 +302,12 @@ class MainWindow(QMainWindow, UiMainWindow):
 
                 group_data.append({"ФИО": fio, "Отдел": department, "Должность": position})
 
-            print("Заглушка: данные группы", group_data)
-
             # Открываем окно с графиком
-            self.graph_window = GraphWindow(data=None)  # Передаём пустые данные
+            self.graph_window = GraphWindow(
+                data=None,
+                context='group',
+                context_data=group_data,
+            )
             self.graph_window.show()
         except Exception as e:
             self.show_error_message("Ошибка при анализе данных группы", e)
@@ -326,10 +320,12 @@ class MainWindow(QMainWindow, UiMainWindow):
                 self.statusBar().showMessage("Выберите отдел для анализа", 5000)
                 return
 
-            print(f"Заглушка: анализ данных для отдела '{selected_department}'")
-
             # Открываем окно с графиком
-            self.graph_window = GraphWindow(data=None)  # Передаём пустые данные
+            self.graph_window = GraphWindow(
+                data=None,
+                context='department',
+                context_data=selected_department,
+            )
             self.graph_window.show()
         except Exception as e:
             self.show_error_message("Ошибка при анализе данных отдела", e)
@@ -342,10 +338,12 @@ class MainWindow(QMainWindow, UiMainWindow):
                 self.statusBar().showMessage("Выберите управление для анализа", 5000)
                 return
 
-            print(f"Заглушка: анализ данных для управления '{selected_unit}'")
-
             # Открываем окно с графиком
-            self.graph_window = GraphWindow(data=None)  # Передаём пустые данные
+            self.graph_window = GraphWindow(
+                data=None,
+                context='unit',
+                context_data=selected_unit,
+            )
             self.graph_window.show()
         except Exception as e:
             self.show_error_message("Ошибка при анализе данных управления", e)
@@ -353,10 +351,11 @@ class MainWindow(QMainWindow, UiMainWindow):
     def display_institute_data(self):
         """Показываем данные по институту."""
         try:
-            print("Заглушка: анализ данных по институту")
-
             # Открываем окно с графиком
-            self.graph_window = GraphWindow(data=None)  # Передаём пустые данные
+            self.graph_window = GraphWindow(
+                data=None,
+                context='institute',
+            )
             self.graph_window.show()
         except Exception as e:
             self.show_error_message("Ошибка при анализе данных института", e)
