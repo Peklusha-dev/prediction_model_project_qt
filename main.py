@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QFileDialog
+import sys
 import traceback  # Для детального вывода ошибок
 
 from ui_module.main_wind import UiMainWindow
@@ -21,11 +22,21 @@ class MainWindow(QMainWindow, UiMainWindow):
         try:
             self.setupUi(self)  # Инициализация интерфейса
             self.current_widget = None  # Ссылка на текущий добавленный виджет
-            self.file_path = xlsx_path  # Путь к файлу Excel
+            self.file_path = None  # Путь к файлу Excel
+            self.data_buff = []
+
+            self.load_file_button.clicked.connect(self.load_file)
             self.butt_chose.clicked.connect(self.handle_choose)
 
         except Exception as e:
             self.show_error_message("Ошибка при инициализации", e)
+
+    def load_file(self):
+        """Открывает диалог выбора файла и сохраняет путь"""
+        file_path, _ = QFileDialog.getOpenFileName(self, "Выберите xlsx-файл", "", "XLSX Files (*.xlsx);;All Files (*)")
+        if file_path:
+            self.file_path = file_path  # Сохраняем путь к файлу
+            self.label_file_path.setText(f"Выбран файл:\n{file_path}")  # Обновляем текст
 
     def handle_choose(self):
         """Обрабатываем выбор типа данных для отображения."""
@@ -34,7 +45,8 @@ class MainWindow(QMainWindow, UiMainWindow):
                 self.main_widget.layout().removeWidget(self.current_widget)
                 self.current_widget.deleteLater()
                 self.current_widget = None
-            elif self.butt_customer.isChecked():
+
+            if self.butt_customer.isChecked():
                 self.statusBar().showMessage("Вы выбрали: Сотрудник", 5000)
                 self.add_employee_widget()
             elif self.butt_group.isChecked():
