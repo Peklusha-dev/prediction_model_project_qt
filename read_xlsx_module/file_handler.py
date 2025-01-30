@@ -1,41 +1,55 @@
-import pandas as pd
+from openpyxl import load_workbook
 
 
-def get_unique_departments(file_path):
+def get_departments(excel_file: str, column: str) -> list:
     """
-    Возвращает уникальные отделы из файла.
-    :param file_path: Путь к файлу Excel
-    :return: Список уникальных отделов
+    Возвращает уникальные значений в столбце из файла. Предназначено для отедлов и управлений.
+    :param excel_file: Путь к файлу Excel
+    :param column: Столбец из которого необходимо считать уникальные значения (отдел/управления)
+    :return values_list: Список уникальных значений в столбце
     """
     try:
-        df = pd.read_excel(file_path, engine='openpyxl', usecols=["Отдел"], dtype=str)
-        return sorted(df["Отдел"].dropna().unique())
+        wb = load_workbook(excel_file, data_only=True)
+        sheet = wb['Лист1']
+        target_column = column
+        headers = [cell.value for cell in next(sheet.iter_rows(min_row=1, max_row=1))]
+        column_index = headers.index(target_column)
+        values = [str(row[column_index]) for row in sheet.iter_rows(min_row=2, values_only=True)]
+        values_list = sorted(list(set(value for value in values if value not in ('None', ''))))
+        return values_list
     except Exception as e:
-        raise ValueError(f"Ошибка при извлечении отделов: {str(e)}")
+        raise ValueError(f"Ошибка при извлечении отделов/управлений: {str(e)}")
 
 
-def get_employees_by_department(file_path, department):
+def get_employees_by_department(excel_file: str, department: str) -> list:
     """
-    Возвращает список сотрудников для указанного отдела.
-    :param file_path: Путь к файлу Excel
+    Возвращает список сотрудников указанного отдела.
+    :param excel_file: Путь к файлу Excel
     :param department: Название отдела
-    :return: Список сотрудников
+    :return filtered_rows: Список сотрудников
     """
     try:
-        df = pd.read_excel(file_path, engine='openpyxl', usecols=["ФИО", "Отдел"], dtype=str)
-        filtered_df = df[df["Отдел"] == department]
-        return filtered_df["ФИО"].dropna().tolist()
+        wb = load_workbook(excel_file, data_only=True)
+        sheet = wb['Лист1']
+        department_index = 4
+        unique_employees = {}
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            if row[department_index] == department:
+                key = row[5]
+                unique_employees[key] = [row[5], row[2], str(row[4])]
+        return list(unique_employees.values())
     except Exception as e:
         raise ValueError(f"Ошибка при извлечении сотрудников: {str(e)}")
 
 
-def get_employee_by_fio_department(file_path, department, fio):
+def get_employee_by_fio_department(excel_file: str, department: str, name: str):
     """
     Чтение информации о сотруднике по ФИО и отделу.
-    :param file_path: Путь к файлу для чтения.
+    :param excel_file: Путь к файлу для чтения.
     :param department: Название отдела.
-    :param fio: ФИО сотрудника.
-    :return: Информация о сотруднике в формате:
+    :param name: ФИО сотрудника.
+    :return employees[name]:
+        Информация о сотруднике в формате:
              {
                  "ФИО": str,
                  "Должность": str,
@@ -43,7 +57,7 @@ def get_employee_by_fio_department(file_path, department, fio):
                  "Результаты": [
                      {
                          "Год тестирования": str,
-                         "Критерии": {"Критерий1": баллы, "Критерий2": баллы, ...},
+                         "Критерии": {"Критерий1": float, "Критерий2": float, ...},
                          "Сумма баллов": float
                      },
                      ...
@@ -51,121 +65,35 @@ def get_employee_by_fio_department(file_path, department, fio):
              }
     """
     try:
-        # Проверяем входные аргументы
-        if not all(isinstance(arg, str) and arg.strip() for arg in [file_path, department, fio]):
-            raise ValueError("Некорректные аргументы. Убедитесь, что путь к файлу, отдел и ФИО указаны корректно.")
-
-        # Читаем данные из файла Excel
-        df = pd.read_excel(file_path, engine="openpyxl", dtype=str)
-
-        # Удаляем лишние пробелы из столбцов ФИО и Отдел
-        df["ФИО"] = df["ФИО"].str.strip()
-        df["Отдел"] = df["Отдел"].str.strip()
-
-        # Фильтруем строки по ФИО и Отделу
-        fio = fio.strip()
-        department = department.strip()
-        candidate_rows = df[(df["ФИО"] == fio) & (df["Отдел"] == department)]
-
-        # Проверяем, есть ли результаты после фильтрации
-        if candidate_rows.empty:
-            print(f"Сотрудник с ФИО '{fio}' в отделе '{department}' не найден.")
-            return None
-
-        # Формируем результат
-        results = []
-        for _, row in candidate_rows.iterrows():
-            year = row.get("Год тестирования", "Не указан")
-            criteria_columns = [col for col in row.index if col.isdigit()]
-            criteria_data = {col: float(row[col].replace(",", ".") if isinstance(row[col], str) else row[col])
-                             for col in criteria_columns}
-
-            # Вычисляем сумму баллов
-            total_score = sum(criteria_data.values())
-
-            results.append({
-                "Год тестирования": year,
-                "Критерии": criteria_data,
-                "Сумма баллов": total_score,
-            })
-
-        # Составляем итоговый результат
-        result = {
-            "ФИО": fio,
-            "Должность": candidate_rows.iloc[0].get("Должность", "Не указана"),
-            "Отдел": department,
-            "Результаты": results,
-        }
-
-        return result
+        wb = load_workbook(excel_file, data_only=True)
+        sheet = wb['Лист1']
+        department_index = 4
+        name_index = 5
+        employees = {}
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            if (row[department_index] == department and row[name_index] == name)\
+                    or (row[department_index] in ('', None) and row[name_index] == name):
+                criteria = dict(zip(
+                    [str(i) for i in range(1, 12)],
+                    [float(i.replace(',', '.')) for i in row[6:17]]
+                ))
+                results = dict(zip(
+                    ['Год тестирования', 'Критерии', 'Cумма баллов'],
+                    [str(row[18]), criteria, float(row[17].replace(',', '.'))]
+                ))
+                fio = row[5]
+                if fio not in employees:
+                    employees[fio] = {
+                        'ФИО': fio,
+                        'Должность': row[2],
+                        'Отдел': str(row[4]),
+                        'Результаты': [results]
+                    }
+                else:
+                    employees[fio]['Результаты'].append(results)
+        return employees[name]
     except Exception as e:
         print(f"Ошибка при чтении данных: {str(e)}")
         return None
-
-#ПЕРЕНЕСТИ В ОТДЕЛЬНЫЙ ФАЙЛ. ДОДЕЛАТЬ.
-#это просто пример, который нагенерил gpt
-class EmployeeIterator:
-    def __init__(self, file_path, department=None):
-        """
-        Инициализация итератора.
-
-        :param file_path: Путь к файлу Excel.
-        :param department: Фильтр по отделу (None для всех отделов).
-        """
-        self.file_path = file_path
-        self.department = department
-        self.workbook = load_workbook(file_path, read_only=True)
-        self.sheet = self.workbook.active
-        self.headers = [cell.value for cell in next(self.sheet.iter_rows(values_only=True))]
-        self.department_index = self.headers.index('Отдел') if 'Отдел' in self.headers else None
-        self.unique_id_index = self.headers.index('ФИО') if 'ФИО' in self.headers else None
-        self.employee_data = defaultdict(list)
-        self.processed_keys = set()  # Множество для отслеживания обработанных сотрудников
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        """
-        Возвращает данные об одном сотруднике за итерацию.
-        """
-        # Построчное чтение и группировка данных
-        for row in self.sheet.iter_rows(values_only=True):
-            if row[self.unique_id_index] is None:
-                continue  # Пропускаем пустые строки
-
-            # Преобразование строки в словарь
-            row_data = dict(zip(self.headers, row))
-
-            # Проверка фильтра по отделу
-            if self.department is None or row_data['Отдел'] == self.department:
-                # Группируем данные по ФИО (или другому уникальному ключу)
-                key = row_data['ФИО']
-                if key not in self.processed_keys:
-                    self.employee_data[key].append(row_data)
-
-        # Возврат следующего сотрудника
-        if self.employee_data:
-            key, records = self.employee_data.popitem()
-            self.processed_keys.add(key)
-            return self._combine_employee_data(records)
-        else:
-            self.workbook.close()
-            raise StopIteration
-
-    def _combine_employee_data(self, records):
-        """
-        Объединяет строки данных о сотруднике.
-
-        :param records: Список записей о сотруднике.
-        :return: Объединенные данные.
-        """
-        combined = records[0].copy()  # Используем первую запись как основу
-        for record in records[1:]:
-            for key, value in record.items():
-                if value and not combined.get(key):  # Заполняем только пустые поля
-                    combined[key] = value
-        return combined
-
 
 
