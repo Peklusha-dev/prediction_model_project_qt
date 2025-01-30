@@ -1,14 +1,14 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 
-class UiEmployeeWidget(object):
+class UiGroupWidget(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(400, 300)
+        Form.resize(600, 500)  # Увеличиваем высоту формы
         self.verticalLayout = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout.setObjectName("verticalLayout")
 
-        # Виджет выбора сотрудника
+        # Виджет выбора сотрудников
         self.widget_chose_cust = QtWidgets.QWidget(Form)
         self.widget_chose_cust.setObjectName("widget_chose_cust")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.widget_chose_cust)
@@ -28,7 +28,7 @@ class UiEmployeeWidget(object):
         # Dropdown выбора отдела
         self.comboBox_department = QtWidgets.QComboBox(self.widget_with_box)
         self.comboBox_department.setObjectName("comboBox_department")
-        self.comboBox_department.setFixedWidth(250)  # Устанавливаем фиксированную ширину
+        self.comboBox_department.setFixedWidth(250)  # Фиксируем ширину
         self.horizontalLayout.addWidget(self.comboBox_department)
 
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -42,24 +42,45 @@ class UiEmployeeWidget(object):
         # Комбобокс поиска сотрудника по ФИО
         self.comboBox_fio = QtWidgets.QComboBox(self.widget_with_box)
         self.comboBox_fio.setObjectName("comboBox_fio")
-        self.comboBox_fio.setFixedWidth(250)  # Устанавливаем фиксированную ширину
+        self.comboBox_fio.setFixedWidth(250)  # Фиксируем ширину
         self.horizontalLayout.addWidget(self.comboBox_fio)
 
         self.verticalLayout_2.addWidget(self.widget_with_box, 0, QtCore.Qt.AlignTop)
+
+        # Кнопка "Добавить в группу"
+        self.butt_add = QtWidgets.QPushButton("Добавить в группу", self.widget_chose_cust)
+        self.butt_add.setObjectName("butt_add")
+        self.butt_add.setFixedWidth(300)  # Устанавливаем фиксированную ширину
+        self.verticalLayout_2.addWidget(self.butt_add, alignment=QtCore.Qt.AlignRight)
+
         self.verticalLayout.addWidget(self.widget_chose_cust)
+
+        # Надпись "Выбранные сотрудники (группа)"
+        self.label_selected_group = QtWidgets.QLabel(Form)
+        self.label_selected_group.setObjectName("label_selected_group")
+        self.verticalLayout.addWidget(self.label_selected_group)
+
+        # Таблица с выбранными сотрудниками
+        self.tableWidget = QtWidgets.QTableWidget(Form)
+        self.tableWidget.setObjectName("tableWidget")
+        self.tableWidget.setColumnCount(3)
+        self.tableWidget.setHorizontalHeaderLabels(["ФИО", "Отдел", "Должность"])
+        self.tableWidget.setMinimumHeight(250)  # Увеличиваем минимальную высоту таблицы
+        self.verticalLayout.addWidget(self.tableWidget)
 
         # Кнопка "Выполнить анализ данных"
         self.butt_analize = QtWidgets.QPushButton(self.widget_chose_cust)
         self.butt_analize.setObjectName("butt_analize")
         self.butt_analize.setFixedWidth(300)
-        self.verticalLayout_2.addWidget(self.butt_analize, alignment=QtCore.Qt.AlignRight)
+        self.verticalLayout.addWidget(self.butt_analize, alignment=QtCore.Qt.AlignRight)
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
+        Form.setWindowTitle(_translate("Form", "Выбор группы сотрудников"))
         self.label_chose_cust.setText(_translate("Form", "Выбор сотрудника"))
         self.label_position.setText(_translate("Form", "Должность"))
+        self.label_selected_group.setText(_translate("Form", "Выбранные сотрудники (группа)"))
         self.butt_analize.setText(_translate("Form", "Выполнить анализ данных"))
